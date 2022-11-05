@@ -66,6 +66,8 @@ class App:
         self.window.mainloop()
 
     def select_file(self):
+        self.convert_button.place_forget()  # Hide convert button
+        self.pdf_title_label.configure(text="No File Selected")  # Update label to default text
         self.which_pages_to_convert.set("all")  # Reset radiobutton to 'all pages', a preference of mine
         # Open file dialog to select pdf to convert to mp3, open to user directory, limited to pdf files
         self.pdf_filename = fd.askopenfilename(title="Select pdf",
