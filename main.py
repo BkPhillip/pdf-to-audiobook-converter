@@ -66,45 +66,43 @@ class App:
         self.window.mainloop()
 
     def select_file(self):
-        # File dialog to select pdf to convert to mp3
+        self.which_pages_to_convert.set("all")  # Reset radiobutton to 'all pages', a preference of mine
+        # Open file dialog to select pdf to convert to mp3, open to user directory, limited to pdf files
         self.pdf_filename = fd.askopenfilename(title="Select pdf",
-                                          initialdir="/Users/BrysonPhillip",
-                                          filetypes=(("pdf files", "*.pdf"), ("all files", "*.*")))
+                                               initialdir="/Users/BrysonPhillip",
+                                               filetypes=(("pdf files", "*.pdf"), ("all files", "*.*")))
         if self.pdf_filename == "":  # Do nothing if no file is selected
             return
-        # Remove success message if selecting another file after a successful conversion
+        # Remove previous message if selecting file again after a successful conversion
         self.success_label.configure(text="")
-        # Option to convert does not appear until file is selected
-        self.convert_button.place(relx=0.5, rely=0.65, anchor=CENTER)
-        # Remove file path from filename for display
-        filename_no_path = self.pdf_filename.split("/")[-1]
-        # Update label with selected pdf
-        self.pdf_title_label.configure(text=f"filename: {filename_no_path}")
-        # Get total number of pages of pdf
-        self.total_pages = get_total_number_of_pages(self.pdf_filename)
-        self.update_page_numbers()
+        self.convert_button.place(relx=0.5, rely=0.65, anchor=CENTER)  # Convert button appears
+        filename_no_path = self.pdf_filename.split("/")[-1]  # Create string of filename without the path for display
+        self.pdf_title_label.configure(text=f"filename: {filename_no_path}")  # Update label to show selected pdf
+        self.total_pages = get_total_number_of_pages(self.pdf_filename)  # Get total number of pages of pdf
+        self.update_page_numbers()  # Update page numbers in page selector
 
     # This function uses text to speech to create an audio file from the text pulled from the pdf
     def convert_pdf_to_mp3(self, pdf_filename):
         self.success_label.configure(text="")  # Remove previous success message
         # Check radio button if either "all pages" is selected or the from and to page entry boxes is selected
         if self.which_pages_to_convert.get() == "all":
-            text_to_convert = create_text_string(pdf_filename, 0, int(self.total_pages))
-        else:  # Add selected pages text to self.full_text
-            # Exit if entry field doesn't have an integer
+            text_to_convert = create_text_string(pdf_filename, 0, int(self.total_pages))  # Get all pages as string
+        else:
+            # Exit if entry field value isn't an integer
             if not is_int(self.from_entry.get()) or not is_int(self.to_entry.get()):
                 self.success_label.configure(text="Error: Only numerals allowed in page selection", foreground="red")
-                self.update_page_numbers()
+                self.update_page_numbers()  # Reset page numbers in entry fields
                 return
             else:
-                starting_page = int(self.from_entry.get()) - 1  # Subtract 1 to fit base 0 index
+                starting_page = int(self.from_entry.get()) - 1  # Subtract one to align with index of pdf
                 ending_page = int(self.to_entry.get())
-                # Check if from is before page 1, if from is after to, and if to is after last page of pdf
+                # Check if 'from' is before page 1, if 'from' is after 'to', and if 'to' is after last page of pdf
                 if starting_page < 0 or starting_page >= ending_page or ending_page > self.total_pages:
                     self.success_label.configure(text="Error: page selection out of range", foreground="red")
-                    self.update_page_numbers()
+                    self.update_page_numbers()  # Reset page numbers in entry fields
                     return
                 else:
+                    # Get selected pages as string
                     text_to_convert = create_text_string(pdf_filename, starting_page, ending_page)
         tts = gTTS(text_to_convert)  # Create text to speech
         tts.save("audio.mp3")  # Save text to speech to file
@@ -118,10 +116,10 @@ class App:
                                             initialdir="Users/BrysonPhillip/Downloads",
                                             filetypes=[("Mp3 Files", "*.mp3")]
                                             )
-        if mp3_filename == '':  # asksaveasfile return None if dialog closed with "cancel"
+        if mp3_filename == '':  # exit function if file dialog canceled
             return
         main_file = open("audio.mp3", "rb").read()  # Open text to speech file
-        destination_file = open(mp3_filename, "wb+")  # Open file with custom name in desired path
+        destination_file = open(mp3_filename, "wb+")  # Open file created from file dialog
         destination_file.write(main_file)  # Write audio file to destination file
         destination_file.close()  # Close file
         # Update label to show mp3 successfully saved
@@ -139,15 +137,14 @@ class App:
         else:
             self.update_entry_widgets(self.total_pages)
 
-    # This function updates the page numbers in the 'from:' and 'to:' entry widget.
-    # Sets 'from' to 1, and 'to' to the last page
+    # This function updates the page numbers in the 'from:' and 'to:' entry widget. Used when selecting a new pdf
     def update_entry_widgets(self, num_pages):
         self.from_entry.delete(0, END)
-        self.from_entry.insert(0, 1)
+        self.from_entry.insert(0, "1")  # Sets 'from:' to 1,
         self.to_entry.delete(0, END)
-        self.to_entry.insert(0, num_pages)
+        self.to_entry.insert(0, num_pages)  # Sets 'to:' to the last page of pdf
 
-    # This function disables the from and to page entry widgets when 'all pages' option selected
+    # This function disables the 'from:' and 'to:' page entry widgets when 'all pages' option selected
     def disable_select(self):
         for widget in self.select_pages_field:
             widget.configure(state="disabled")
@@ -160,31 +157,32 @@ class App:
             widget.update()
 
 
-# This function opens the pdf and gets the page count
+# This function opens the pdf, gets the page count, then closes the pdf
 def get_total_number_of_pages(pdf_filename):
     pdf_file = open(pdf_filename, "rb")  # Create pdf file object
     pdf_reader = PyPDF2.PdfFileReader(pdf_file)  # Create pdf reader object
-    number_of_pages = pdf_reader.numPages  # Return total number of pages
+    number_of_pages = pdf_reader.numPages  # Create var equal to  total number of pages
     pdf_file.close()  # Close the pdf file object
     return number_of_pages
 
 
-# This function creates a string from the selected pages of the pdf
+# This function opens the pdf, creates a string from the selected pages of the pdf, then closes the pdf
 def create_text_string(pdf_name, from_page, to_page):
     pdf_file = open(pdf_name, "rb")  # Create pdf file object
-    pdf_reader = PyPDF2.PdfFileReader(pdf_file)  # Create pdf reader object
+    pdf_reader = PyPDF2.PdfFileReader(pdf_file)  # Create file reader object of file
     # Get each page of pdf and extract text to string variable
     full_text = ""
     for page in range(from_page, to_page):
         pdf_page = pdf_reader.getPage(page)  # Create a page object
-        full_text += pdf_page.extractText()  # Add page objects together  to create one text string
+        full_text += pdf_page.extractText()  # Add page objects together to create one text string
     pdf_file.close()  # Close the pdf file object
     return full_text
 
-# This function checks if variable is an integer, used checking the page numbers selected
+
+# This function checks if variable is an integer, including strings of numbers
 def is_int(x):
     try:
-        x = int(x)
+        int(x)
         return True
     except ValueError:
         return False
